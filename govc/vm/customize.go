@@ -41,6 +41,7 @@ type customize struct {
 	netmask   string
 	dnsserver flags.StringList
 	kind      string
+	mac       string
 }
 
 func init() {
@@ -61,6 +62,7 @@ func (cmd *customize) Register(ctx context.Context, f *flag.FlagSet) {
 	f.StringVar(&cmd.netmask, "netmask", "", "Netmask")
 	f.Var(&cmd.dnsserver, "dns-server", "DNS server")
 	f.StringVar(&cmd.kind, "type", "Linux", "Customization type if spec NAME is not specified (Linux|Windows)")
+	f.StringVar(&cmd.mac, "mac", "", "Mac Address")
 }
 
 func (cmd *customize) Usage() string {
@@ -175,7 +177,16 @@ func (cmd *customize) Run(ctx context.Context, f *flag.FlagSet) error {
 		}
 	}
 
-	nic := &spec.NicSettingMap[0]
+	var nic = &types.CustomizationAdapterMapping{}
+	for i, nicSettingMap := range spec.NicSettingMap {
+		if nicSettingMap.MacAddress == cmd.mac {
+			nic = &spec.NicSettingMap[i]
+		}
+	}
+	if nic == nil {
+		return fmt.Errorf("could not find specific adapter mac: %s", cmd.mac)
+	}
+
 	if cmd.ip != "" {
 		nic.Adapter.Ip = &types.CustomizationFixedIp{IpAddress: cmd.ip}
 	}
